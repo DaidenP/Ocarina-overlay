@@ -60,12 +60,12 @@ function nextIdx(i,fired){for(let k=1;k<=C.length;k++){const j=(i+k)%C.length,c=
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
  const end=c.kind==='t'?Date.now()+c.dur*1000:c.kind==='i'?Date.now()+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>Date.now()):null;
  if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
-function addCoins(n){if(!n)return;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+function addCoins(n){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
  S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}
  if(S.coins>=S.max&&!S.fired.includes(23)){S.fired.push(23);trigger(23)}save()}
 const fx=t=>String(t).replace(/–/g,'-');
-function overlayHTML(s,now){
+function overlayHTML(s,now){C[23].cost=s.max||3000;
  const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>!a.end||a.end>now);
  const L=act.map(a=>fx(a.n)),acl='<div class="h">Active curses:'+(L.length?'':' none')+'</div>'+L.slice(-2).map(x=>'<div class="i">'+x+'</div>').join('');
  const pop='';
@@ -87,7 +87,7 @@ function save(){S.v=Date.now();render();try{localStorage.setItem('ocov',JSON.str
 function heal(o){if(o&&o.cur===0&&o.nxt===6&&!(o.fired||[]).length)o.nxt=1;return o}
 function adopt(d){if(d&&(isOv||d.v>=S.v)){S=Object.assign({},DEF,heal(d));render()}}
 function opts(sel){return C.map((c,i)=>`<option value="${i}" ${i===sel?'selected':''}>${c.cost} – ${c.name}</option>`).join('')}
-function render(){const root=$('#app');
+function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#sn']){const el=$(q),o=el&&el.options[23];if(o)o.textContent=C[23].cost+' – '+C[23].name}
  if(isOv){document.body.classList.add('ovmode');if(!$('#ov')){root.style.cssText='padding:0;max-width:none;display:block';root.innerHTML='<div id="ov" class="ovbox"></div>'}paintOv();return}
  if(!$('#ctl')){root.innerHTML=`<div id="ctl" style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Sign in</h2><div class="row"><input id="em" type="email" placeholder="Email" style="min-width:0"><input id="pw" type="password" placeholder="Password" style="min-width:0"></div><div class="row"><button class="pri" id="si">Sign in</button><button id="so">Sign out</button></div><div class="mu" id="ls"></div></div>
