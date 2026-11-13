@@ -38,6 +38,7 @@ body.ovmode #ov{width:min(100vw,calc(100dvh*1080/1920));height:min(100dvh,calc(1
 #ov .bar i{display:block;height:100%;transition:width .6s}
 #ov .bar.g{left:6cqw;width:88cqw;height:2.8cqw;border-color:#e8d89a;background:#07140a}
 #ov .cam{left:6cqw;width:88cqw;height:49.5cqw;text-shadow:none}
+#ov .dc{position:absolute;left:0;right:0;height:5.4cqw;display:flex;align-items:center;justify-content:center;gap:1.6cqw;font-size:4.2cqw;line-height:1;white-space:nowrap}#ov .dc svg{width:5.4cqw;height:5.4cqw;flex:none;filter:drop-shadow(0 0 .3cqw #000)}
 #ov .t{display:flex;align-items:center}
 #ov .t .fit{display:block;width:100%;line-height:1.12}
 #ov .t.c .fit{text-align:center}#ov .t.nw .fit{white-space:nowrap}#ov .t.red{color:#ff3a4f}
@@ -53,11 +54,11 @@ const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomai
 </head><body>
 <div id="app"></div>
 <script>
-const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 heart for rest of game','p',0,0],[50,'Overhead cam for 5 min','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
+const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 heart for rest of game','p',0,0],[50,'Overhead cam for 5 min','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
 const DEF={coins:0,max:3000,pool:0,cur:0,nxt:6,fired:[],active:[],fol:0,folMax:1000,resets:0,pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-function nextIdx(i,fired){for(let k=1;k<=C.length;k++){const j=(i+k)%C.length,c=C[j];if(c.rep||!fired.includes(j))return j}return i}
+function nextIdx(i,fired){const o=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b),p=o.indexOf(i);for(let k=1;k<=o.length;k++){const j=o[(p+k)%o.length],c=C[j];if(c.rep||!fired.includes(j))return j}return i}
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
  if(c.kind!=='i')S.active.push({k:Date.now()+'-'+i,n:c.name,end:c.kind==='t'?Date.now()+c.dur*1000:0});
  S.pop={n:c.name,t:Date.now()}}
@@ -87,12 +88,13 @@ function overlayHTML(s,now){C[23].cost=s.max||3000;
  ${T('c nw',16,9.8,68,5.4,5.4,3.4,'Final Curse: Game Reset'+(s.resets>0?' #'+s.resets:''))}${T('c nw',16,15.4,68,3.6,3.4,2.6,s.coins+'/'+s.max+' gift coins')}
  <div class="bar" style="top:19.8cqw"><i style="width:${p(s.coins/s.max)}%;background:linear-gradient(#e0452a,#a52412)"></i></div>
  <div class="cam" style="top:24.5cqw"></div>
- ${T('l',6,74.42,88,6,3.6,2.6,'Current goal: '+fx(cur.name)+' ('+need+' more coins)')}
+ ${T('l',6.83,74.42,88,6,3.6,2.6,'Current goal: '+fx(cur.name)+' ('+need+' more coins)')}
  <div class="bar g" style="top:80.82cqw"><i style="width:${p(s.pool/cur.cost)}%;background:linear-gradient(#4fd464,#269a39)"></i></div>
- ${T('l nw',6,83.92,88,3.4,3.4,2.5,'Next: '+fx(nx.name)+' ('+nx.cost+' coins)')}
- ${T('l red',6,87.42,88,5.6,3.4,2.5,'Active curses: '+as)}
+ ${T('l nw',6.83,83.92,88,3.4,3.4,2.5,'Next: '+fx(nx.name)+' ('+nx.cost+' coins)')}
+ ${T('l red',6.83,87.42,88,5.6,3.4,2.5,'Active curses: '+as)}
  <div class="cam" style="top:94.3cqw"></div>
  ${T('c nw',5,147.6,90,9.6,4.8,3.4,'Send gifts to make my game harder<br>Full gift goals on pinned post')}
+ <div class="dc" style="top:157.8cqw"><svg viewBox="0 -28.5 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid"> <g> <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" fill="#5865F2" fill-rule="nonzero"> </path> </g> </svg><span>discord.gg/NheMwDzsG</span></div>
  ${pop}`}
 function fitAll(e){e.querySelectorAll('.fit').forEach(el=>{const b=el.parentNode,mn=+el.dataset.min;let fs=+el.dataset.fs;el.style.fontSize=fs+'cqw';
  for(let k=0;k<40&&fs>mn&&(el.scrollWidth>b.clientWidth+1||el.offsetHeight>b.clientHeight+1);k++){fs=Math.max(mn,fs*.94);el.style.fontSize=fs+'cqw'}})}

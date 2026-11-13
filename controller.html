@@ -52,11 +52,11 @@ const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomai
 </head><body>
 <div id="app"></div>
 <script>
-const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
+const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
 const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-function nextIdx(i,fired){for(let k=1;k<=C.length;k++){const j=(i+k)%C.length,c=C[j];if(c.rep||!fired.includes(j))return j}return i}
+function nextIdx(i,fired){const o=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b),p=o.indexOf(i);for(let k=1;k<=o.length;k++){const j=o[(p+k)%o.length],c=C[j];if(c.rep||!fired.includes(j))return j}return i}
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
  const end=c.kind==='t'?Date.now()+c.dur*1000:c.kind==='i'?Date.now()+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>Date.now()):null;
  if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
@@ -77,17 +77,15 @@ function overlayHTML(s,now){C[23].cost=s.max||3000;
  <div class="bar" style="top:43.3%;border-color:#e8d89a;background:#07140a"><i style="width:${p(s.pool/cur.cost)}%;background:#35c44a"></i></div>
  <div class="txt" style="top:45.8%;font-size:3.2cqw">Next: ${fx(nx.name)} (${nx.cost} coins)</div>
  <div class="cl" style="top:48%">${acl}</div>
- <div class="big" style="top:82.6%">Send gifts to make my game harder<br>Full gift goals on pinned post</div>
- <div class="fol" style="top:92%">lets get to ${s.folMax} followers! ${s.fol}/${s.folMax}</div>
- <div class="fbar" style="top:95.4%"><i style="width:${p(s.fol/s.folMax)}%">${Math.floor(p(s.fol/s.folMax))}%</i></div>${pop}`}
+ <div class="big" style="top:82.6%">Send gifts to make my game harder<br>Full gift goals on pinned post</div>${pop}`}
 function paintOv(){const n=Date.now();document.querySelectorAll('.ovbox').forEach(e=>{const keep=e.querySelector('.pop');e.innerHTML=overlayHTML(S,n);
  const np=e.querySelector('.pop');if(keep&&np&&keep.dataset.t===np.dataset.t){np.style.animation='none';np.style.opacity=Math.max(0,1-Math.max(0,(n-S.pop.t-4250)/750))}})}
 function save(){S.v=Date.now();render();try{localStorage.setItem('ocov',JSON.stringify(S))}catch(e){}
  try{bc&&bc.postMessage(S)}catch(e){}if(ref&&canWrite)ref.set(JSON.parse(JSON.stringify(S))).catch(()=>{canWrite=false;render()})}
 function heal(o){if(o&&o.cur===0&&o.nxt===6&&!(o.fired||[]).length)o.nxt=1;return o}
 function adopt(d){if(d&&(isOv||d.v>=S.v)){S=Object.assign({},DEF,heal(d));render()}}
-function opts(sel){return C.map((c,i)=>`<option value="${i}" ${i===sel?'selected':''}>${c.cost} – ${c.name}</option>`).join('')}
-function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#sn']){const el=$(q),o=el&&el.options[23];if(o)o.textContent=C[23].cost+' – '+C[23].name}
+function opts(sel){return C.map((c,i)=>[c,i]).sort((a,b)=>a[0].cost-b[0].cost||a[1]-b[1]).map(([c,i])=>`<option value="${i}" ${i===sel?'selected':''}>${c.cost} – ${c.name}</option>`).join('')}
+function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#sn']){const el=$(q),o=el&&[...el.options].find(x=>x.value==='23');if(o)o.textContent=C[23].cost+' – '+C[23].name}
  if(isOv){document.body.classList.add('ovmode');if(!$('#ov')){root.style.cssText='padding:0;max-width:none;display:block';root.innerHTML='<div id="ov" class="ovbox"></div>'}paintOv();return}
  if(!$('#ctl')){root.innerHTML=`<div id="ctl" style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Sign in</h2><div class="row"><input id="em" type="email" placeholder="Email" style="min-width:0"><input id="pw" type="password" placeholder="Password" style="min-width:0"></div><div class="row"><button class="pri" id="si">Sign in</button><button id="so">Sign out</button></div><div class="mu" id="ls"></div></div>
@@ -96,7 +94,6 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
  <div class="row"><button data-m="-1000">Lower cap −1000</button><button data-m="1000">Raise cap +1000</button></div>
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
  <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select></div>
- <div class="card"><h2>Followers</h2><div class="row"><button data-f="-1">−1</button><button data-f="1">+1</button><button data-f="10">+10</button></div><div class="mu">Goal <input id="fm" type="number" style="width:90px"></div></div>
  <div class="card"><h2>Game resets</h2><div class="stat" id="rc"></div><div class="row"><button class="pri" data-r="1">+1 Reset</button><button data-r="-1">−1</button></div><div class="mu">Shown next to “Game Reset” at the top of the overlay. “Reset all” keeps this count.</div></div></div>
  <div style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Live preview</h2><div id="pv"><div id="ov" class="ovbox"></div></div><div class="mu" style="margin-top:8px">Overlay link (put this in the stream): <b id="lk"></b><br>Controller link: <b id="lc"></b></div></div>
@@ -112,10 +109,9 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
   $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,max:S.max});save();return}
    b.textContent='Tap again to confirm';b._t=setTimeout(()=>{b._t=0;b.textContent='Reset all'},4000)};
   $('#sc').onchange=e=>{S.cur=+e.target.value;S.nxt=nextIdx(S.cur,S.fired);S.pool=0;save()};$('#sn').onchange=e=>{S.nxt=+e.target.value;save()};
-  $('#fm').onchange=e=>{S.folMax=Math.max(1,+e.target.value||1000);save()};
   $('#ac').onclick=e=>{const b=e.target.closest('button');if(b){S.active=S.active.filter(a=>a.k!==b.dataset.k);save()}}}
  $('#st').textContent=S.coins+' / '+S.max;$('#rc').textContent=S.resets||0;$('#st2').textContent='Goal progress: '+S.pool+' / '+C[S.cur].cost;
- $('#sc').value=S.cur;$('#sn').value=S.nxt;if(document.activeElement!==$('#fm'))$('#fm').value=S.folMax;
+ $('#sc').value=S.cur;$('#sn').value=S.nxt;
  $('#ls').textContent=authUser?'Signed in as '+authUser.email:'Not signed in.';$('#wr').textContent=!dbOk?'Live sync: not connected.':canWrite?'Live sync: connected.':'Not signed in: sign in above to control the stream.';
  const now=Date.now(),act=S.active.filter(a=>!a.end||a.end>now);
  $('#ac').innerHTML=act.length?act.map(a=>`<div class="it"><span>${a.n}${a.end?'<br><small>'+mmss(Math.ceil((a.end-now)/1000))+' left</small>':''}</span><button data-k="${a.k}">Clear</button></div>`).join(''):'<span class="mu">None</span>';
