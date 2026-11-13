@@ -77,7 +77,7 @@ function folSVG(s){const f=Math.min(1,s.fol/s.folMax),A='M185 790H1487L1512 821L
  <text x="836" y="837" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" stroke="#000" stroke-width="7" paint-order="stroke" style="text-shadow:none">${Math.floor(f*100)}%</text></svg>`}
 function overlayHTML(s,now){
  const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>!a.end||a.end>now);
- const as=act.length?act.map(a=>fx(a.n)+(a.end?' ('+mmss(Math.ceil((a.end-now)/1000))+')':'')).join(' / '):'none';
+ const as=act.length?act.slice(-2).map(a=>fx(a.n)+(a.end?' ('+mmss(Math.ceil((a.end-now)/1000))+')':'')).join(' / '):'none';
  const pop=s.pop&&now-s.pop.t<5000?`<div class="pop" data-t="${s.pop.t}">CURSED!<br>${fx(s.pop.n)}</div>`:'';
  const p=x=>Math.min(100,x*100),d=`animation-delay:-${(now%1800)/1000}s`;
  const T=(cls,l,y,w,h,fs,mn,txt)=>`<div class="t ${cls}" style="left:${l}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw"><span class="fit" data-fs="${fs}" data-min="${mn}">${txt}</span></div>`;

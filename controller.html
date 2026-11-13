@@ -35,7 +35,7 @@ body.ovmode #ov{width:min(100vw,calc(100dvh*1284/2250));height:min(100dvh,calc(1
 #ov .bar i{display:block;height:100%;transition:width .6s}
 #ov .txt{position:absolute;left:2cqw;right:0;font-weight:400;white-space:nowrap}
 #ov .cl{position:absolute;left:2cqw;right:2cqw;font-size:3.2cqw;line-height:1.2;color:#ff4a5a;max-height:36cqw;overflow:hidden;display:flex;flex-wrap:wrap;gap:.4cqw 1.6cqw}
-#ov .cl .h{flex:0 0 100%}#ov .cl .i+.i::before{content:'/ '}
+#ov .cl{display:grid;grid-template-columns:1fr 1fr}#ov .cl .h{grid-column:1/-1}#ov .cl .i{min-width:0}
 #ov .big{position:absolute;left:0;right:0;text-align:center;font-weight:400;line-height:1.18;font-size:6.2cqw}
 #ov .fol{position:absolute;left:12%;right:12%;text-align:center;font:400 3.6cqw 'Hylia Serif',Cinzel,Georgia,serif;text-shadow:none}
 #ov .fbar{position:absolute;left:12%;right:12%;height:3.4cqw;background:#2a1008;border:.4cqw solid #f1e2a5;border-radius:1cqw;overflow:hidden}
@@ -47,7 +47,6 @@ body.ovmode #ov{width:min(100vw,calc(100dvh*1284/2250));height:min(100dvh,calc(1
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
-/* PASTE YOUR FIREBASE CONFIG HERE (Firebase console > Project settings > Your apps) */
 const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomain:"ocarina-overlay.firebaseapp.com",databaseURL:"https://ocarina-overlay-default-rtdb.firebaseio.com",projectId:"ocarina-overlay",appId:"1:768672758989:web:34dc1779406df41b533d84"};
 </script>
 </head><body>
@@ -68,7 +67,7 @@ function addCoins(n){if(!n)return;hist.push(JSON.stringify(S));hist=hist.slice(-
 const fx=t=>String(t).replace(/–/g,'-');
 function overlayHTML(s,now){
  const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>!a.end||a.end>now);
- const L=act.map(a=>fx(a.n)),acl='<div class="h">Active curses:'+(L.length?'':' none')+'</div>'+L.slice(0,12).map(x=>'<div class="i">'+x+'</div>').join('')+(L.length>12?'<div class="i">+'+(L.length-12)+' more</div>':'');
+ const L=act.map(a=>fx(a.n)),acl='<div class="h">Active curses:'+(L.length?'':' none')+'</div>'+L.slice(-2).map(x=>'<div class="i">'+x+'</div>').join('');
  const pop='';
  const p=x=>Math.min(100,x*100);
  return `<div class="ban"><div class="torch" style="left:7%"></div><div class="torch" style="right:7%"></div>
@@ -103,7 +102,7 @@ function render(){const root=$('#app');
  <div class="card"><h2>Live preview</h2><div id="pv"><div id="ov" class="ovbox"></div></div><div class="mu" style="margin-top:8px">Overlay link (put this in the stream): <b id="lk"></b><br>Controller link: <b id="lc"></b></div></div>
  <div class="card"><h2>Active curses</h2><div class="list" id="ac"></div></div></div>`;
   $('#qa').innerHTML=[1,5,10,50,100].map(n=>`<button data-c="${n}">+${n}</button>`).join('');
-  $('#sc').innerHTML=opts(0);$('#sn').innerHTML=opts(0);$('#lk').textContent=new URL('./',location.href).href;$('#lc').textContent=location.href.split('#')[0];
+  $('#sc').innerHTML=opts(0);$('#sn').innerHTML=opts(0);$('#lk').textContent='https://daidenp.github.io/Ocarina-overlay/';$('#lc').textContent='https://daidenp.github.io/Ocarina-overlay/controller.html';
   $('#ctl').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)addCoins(+b.dataset.c);
    if(b.dataset.f){S.fol=Math.max(0,S.fol+ +b.dataset.f);save()}
    if(b.dataset.r){S.resets=Math.max(0,(S.resets||0)+ +b.dataset.r);save()}
