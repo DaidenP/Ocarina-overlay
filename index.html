@@ -46,14 +46,13 @@ body.ovmode #ov{width:min(100vw,calc(100dvh*1080/1920));height:min(100dvh,calc(1
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-/* PASTE YOUR FIREBASE CONFIG HERE (Firebase console > Project settings > Your apps) */
 const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomain:"ocarina-overlay.firebaseapp.com",databaseURL:"https://ocarina-overlay-default-rtdb.firebaseio.com",projectId:"ocarina-overlay",appId:"1:768672758989:web:34dc1779406df41b533d84"};
 </script>
 </head><body>
 <div id="app"></div>
 <script>
 const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 heart for rest of game','p',0,0],[50,'Overhead cam for 5 min','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
-const DEF={coins:0,max:3000,pool:0,cur:0,nxt:6,fired:[],active:[],fol:0,folMax:1000,pop:null,v:0};
+const DEF={coins:0,max:3000,pool:0,cur:0,nxt:6,fired:[],active:[],fol:0,folMax:1000,resets:0,pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function nextIdx(i,fired){for(let k=1;k<=C.length;k++){const j=(i+k)%C.length,c=C[j];if(c.rep||!fired.includes(j))return j}return i}
@@ -83,7 +82,7 @@ function overlayHTML(s,now){
  const p=x=>Math.min(100,x*100),d=`animation-delay:-${(now%1800)/1000}s`;
  const T=(cls,l,y,w,h,fs,mn,txt)=>`<div class="t ${cls}" style="left:${l}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw"><span class="fit" data-fs="${fs}" data-min="${mn}">${txt}</span></div>`;
  return `<div class="ban"></div><div class="tc" style="left:7.5cqw;top:8.4cqw">${torch(d)}</div><div class="tc" style="left:87.2cqw;top:8.4cqw">${torch(d)}</div>
- ${T('c nw',16,9.8,68,5.4,5.4,3.4,'Final Curse: Game Reset')}${T('c nw',16,15.4,68,3.6,3.4,2.6,s.coins+'/'+s.max+' gift coins')}
+ ${T('c nw',16,9.8,68,5.4,5.4,3.4,'Final Curse: Game Reset')}${T('c nw',16,15.4,68,3.6,3.4,2.6,s.coins+'/'+s.max+' gift coins / <span style="color:#ffd24a">Game resets: '+(s.resets||0)+'</span>')}
  <div class="bar" style="top:19.8cqw"><i style="width:${p(s.coins/s.max)}%;background:linear-gradient(#e0452a,#a52412)"></i></div>
  <div class="cam" style="top:24.5cqw"></div>
  ${T('l',6,74.7,88,6,3.6,2.6,'Current goal: '+fx(cur.name)+' ('+need+' more coins)')}
@@ -136,6 +135,6 @@ async function init(){document.documentElement.style.setProperty('--stone',stone
  try{bc=new BroadcastChannel('ocov');bc.onmessage=e=>adopt(e.data)}catch(e){}
  addEventListener('storage',e=>{if(e.key==='ocov'&&e.newValue)adopt(JSON.parse(e.newValue))});
  render();setInterval(()=>{S.active=S.active.filter(a=>!a.end||a.end>Date.now()-60000);isOv?paintOv():render()},1000);
- try{firebase.initializeApp(firebaseConfig);ref=firebase.database().ref('state');dbOk=true;ref.on('value',s=>{const d=s.val();if(d){d.active=d.active||[];d.fired=d.fired||[];adopt(d)}});if(!isOv&&firebase.auth)firebase.auth().onAuthStateChanged(u=>{canWrite=!!u;authUser=u;render()})}catch(e){}}
+ try{firebase.initializeApp(firebaseConfig);ref=firebase.database().ref('state');dbOk=true;ref.on('value',s=>{const d=s.val();if(d){d.active=d.active||[];d.fired=d.fired||[];adopt(d)}})}catch(e){}}
 init();
 </script></body></html>
