@@ -36,7 +36,7 @@ body.ovmode #ov{width:min(100vw,calc(100dvh*1080/1920));height:min(100dvh,calc(1
 #ov .fl{transform-box:fill-box;transform-origin:50% 95%;animation:fl .9s ease-in-out infinite alternate}
 #ov .bar{left:5.7778cqw;width:94cqw;height:3.3cqw;border:.3cqw solid #f1e2a5;border-radius:3cqw;background:#2a0505;box-shadow:0 0 0 .25cqw #000,0 .4cqw .8cqw .3cqw #000a,inset 0 .3cqw .7cqw #000;overflow:hidden}
 #ov .bar i{display:block;height:100%;transition:width .6s}
-#ov .bar.g{left:7.3889cqw;width:88cqw;height:2.8cqw;border-color:#e8d89a;background:#07140a}
+#ov .bar.g{left:4.6111cqw;width:88cqw;height:2.8cqw;border-color:#e8d89a;background:#07140a}
 #ov .bar.lk{left:6cqw;width:88cqw;height:3.3cqw;background:#2a0516}#ov .bar.lk .lt{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:2.1cqw;line-height:1;white-space:nowrap}
 #ov .cam{left:6cqw;width:88cqw;height:49.5cqw;text-shadow:none}
 #ov .dc{position:absolute;left:0;right:0;height:5.4cqw;display:flex;align-items:center;justify-content:center;gap:1.6cqw;font-size:4.2cqw;line-height:1;white-space:nowrap}#ov .dc svg{width:5.4cqw;height:5.4cqw;flex:none;filter:drop-shadow(0 0 .3cqw #000)}
@@ -68,6 +68,8 @@ function addCoins(n,lk){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S
  if(lk)S.likes=(S.likes||0)+lk;S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}
  if(S.coins>=S.max&&!S.fired.includes(23)){S.fired.push(23);trigger(23)}save()}
+const PR=/rest of (the )?game/i;
+const kf=n=>(Math.round(n/100)/10)+'k';
 const fx=t=>String(t).replace(/–/g,'-');
 function folSVG(s){const f=Math.min(1,s.fol/s.folMax),A='M185 790H1487L1512 821L1487 852H185L160 821Z',T='M262 789H360L372 748Q376 736 392 736H1290Q1306 736 1310 748L1322 789H1415';
  return `<svg viewBox="150 725 1372 135"><defs><pattern id="st" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="#ff5a22"/><rect width="7" height="14" fill="#ff6d33"/></pattern><clipPath id="fc"><path d="${A}"/></clipPath></defs>
@@ -76,7 +78,7 @@ function folSVG(s){const f=Math.min(1,s.fol/s.folMax),A='M185 790H1487L1512 821L
  <text x="837" y="783" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" style="text-shadow:none">lets get to ${s.folMax} followers!<tspan dx="26">${s.fol}/${s.folMax}</tspan></text>
  <text x="836" y="837" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" stroke="#000" stroke-width="7" paint-order="stroke" style="text-shadow:none">${Math.floor(f*100)}%</text></svg>`}
 function overlayHTML(s,now){C[23].cost=s.max||3000;
- const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>!a.end||a.end>now);
+ const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>(!a.end||a.end>now)&&!PR.test(a.n)),perm=(s.fired||[]).filter(i=>C[i]&&PR.test(C[i].name)).map(i=>fx(C[i].name).replace(/\s*\(rest of (the )?game\)|\s+for (the )?rest of (the )?game/i,''));
  const as=act.length?act.slice(-2).map(a=>fx(a.n)+(a.end?' ('+mmss(Math.ceil((a.end-now)/1000))+')':'')).join(' / '):'none';
  const pop=s.pop&&now-s.pop.t<5000?`<div class="pop" data-t="${s.pop.t}">CURSED!<br>${fx(s.pop.n)}</div>`:'';
  const p=x=>Math.min(100,x*100),d=`animation-delay:-${(now%1800)/1000}s`;
@@ -85,12 +87,13 @@ function overlayHTML(s,now){C[23].cost=s.max||3000;
  ${T('c nw',18.7778,9.8,68,5.4,5.4,3.4,'Final Curse: Game Reset'+(s.resets>0?' #'+s.resets:''))}${T('c nw',18.7778,15.4,68,3.6,3.4,2.6,s.coins+'/'+s.max+' gift coins')}
  <div class="bar" style="top:19.8cqw"><i style="width:${p(s.coins/s.max)}%;background:linear-gradient(#e0452a,#a52412)"></i></div>
  <div class="cam" style="top:24.5cqw"></div>
- ${T('l',8.2189,73.0311,88,6,3.6,2.6,'Current goal: '+fx(cur.name)+' ('+need+' more coins)')}
+ ${perm.length?T('l red nw',5.4411,69.6,88,3.4,3,1.8,'Permanent curses: '+perm.join(' / ')):''}
+ ${T('l',5.4411,73.0311,88,6,3.6,2.6,'Current goal: '+fx(cur.name)+' ('+need+' more coins)')}
  <div class="bar g" style="top:79.4311cqw"><i style="width:${p(s.pool/cur.cost)}%;background:linear-gradient(#4fd464,#269a39)"></i></div>
- ${T('l nw',8.2189,82.5311,88,3.4,3.4,2.5,'Next: '+fx(nx.name)+' ('+nx.cost+' coins)')}
- ${T('l red',8.2189,86.0311,88,5.6,3.4,2.5,'Active curses: '+as)}
+ ${T('l nw',5.4411,82.5311,88,3.4,3.4,2.5,'Next: '+fx(nx.name)+' ('+nx.cost+' coins)')}
+ ${T('l red',5.4411,86.0311,88,5.6,3.4,2.5,'Active curses: '+as)}
  <div class="cam" style="top:94.3cqw"></div>
- <div class="bar lk" style="top:144.2cqw"><i style="width:${p((s.likes||0)/(s.likesMax||10000))}%;background:linear-gradient(#ff6aa8,#c8246c)"></i><span class="lt">Likes: ${(s.likes||0).toLocaleString()} / ${(s.likesMax||10000).toLocaleString()}</span></div>
+ <div class="bar lk" style="top:144.2cqw"><i style="width:${p((s.likes||0)/(s.likesMax||10000))}%;background:linear-gradient(#ff6aa8,#c8246c)"></i><span class="lt">Likes: ${kf(s.likes||0)} / ${kf(s.likesMax||10000)}</span></div>
  ${T('c nw',5,147.6,90,9.6,4.8,3.4,'Send gifts to make my game harder<br>Full gift goals on pinned post')}
  <div class="dc" style="top:157.8cqw"><svg viewBox="0 -28.5 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid"> <g> <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" fill="#5865F2" fill-rule="nonzero"> </path> </g> </svg><span>discord.gg/NheMwDzsG</span></div>
  ${pop}`}
