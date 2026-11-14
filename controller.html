@@ -65,6 +65,9 @@ function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i)
  if(PR.test(c.name)){S.perm=S.perm||[];if(!S.perm.includes(i))S.perm.push(i)}
  const end=c.kind==='t'?Date.now()+c.dur*1000:c.kind==='i'?Date.now()+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>Date.now()):null;
  if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
+function addPool(n){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+ S.pool=Math.max(0,S.pool+n);let g=0;
+ while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}save()}
 function addCoins(n,lk){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
  if(lk)S.likes=(S.likes||0)+lk;S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}
@@ -113,9 +116,9 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
  <div class="card"><h2>Sign in</h2><div class="row"><input id="em" type="email" placeholder="Email" style="min-width:0"><input id="pw" type="password" placeholder="Password" style="min-width:0"></div><div class="row"><button class="pri" id="si">Sign in</button><button id="so">Sign out</button></div><div class="mu" id="ls"></div></div>
  <div class="card"><h2>Gift coins</h2><div class="stat" id="st"></div><div class="mu" id="st2"></div>
  <div class="row" id="qa"></div><div class="row"><input id="cu" type="number" placeholder="Custom coins" style="min-width:0"><button class="pri" id="cb">Add</button></div>
- <div class="row"><button data-m="-1000">Lower cap −1000</button><button data-m="1000">Raise cap +1000</button></div>
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
- <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select></div>
+ <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select>
+ <div class="mu" style="margin-top:8px">Change goal progress only (no gift coins)</div><div class="row"><button data-g="1">+1</button><button data-g="5">+5</button><button data-g="10">+10</button><button data-g="25">+25</button></div><div class="row"><button data-g="-1">−1</button><button data-g="-5">−5</button><button data-g="-10">−10</button><button data-g="-25">−25</button><button id="lun3">↩ Undo</button></div></div>
  <div class="card"><h2>Game resets</h2><div class="stat" id="rc"></div><div class="row"><button class="pri" data-r="1">+1 Reset</button><button data-r="-1">−1</button></div><div class="mu">Shown next to “Game Reset” at the top of the overlay. “Reset all” keeps this count.</div></div>
  <div class="card"><h2>Likes</h2><div class="stat" id="lkc"></div><div class="row"><button class="pri" data-l="1000">+1k Likes</button><button id="lkr">Reset likes</button><button id="lun">↩ Undo</button></div><div class="row"><button data-lm="5000">Raise goal +5k</button><button data-lm="10000">Raise goal +10k</button><button id="lgr">Reset goal to 10k</button></div></div>
  <div class="card"><h2>Followers</h2><div class="row"><button class="pri" data-fc="1">+1 Follower</button><button id="lun2">↩ Undo</button></div><div class="mu">Each follower also adds 1 gift coin.</div></div></div>
@@ -126,6 +129,7 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
   $('#qa').innerHTML=[1,5,10,50,100].map(n=>`<button data-c="${n}">+${n}</button>`).join('');
   $('#sc').innerHTML=opts(0);$('#sn').innerHTML=opts(0);$('#lk').textContent='https://daidenp.github.io/Ocarina-overlay/';$('#lc').textContent='https://daidenp.github.io/Ocarina-overlay/controller.html';
   $('#ctl').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)addCoins(+b.dataset.c);
+   if(b.dataset.g){addPool(+b.dataset.g)}
    if(b.dataset.fc){addCoins(+b.dataset.fc)}
    if(b.dataset.f){S.fol=Math.max(0,S.fol+ +b.dataset.f);save()}
    if(b.dataset.l){const n=+b.dataset.l;addCoins(Math.floor(n/1000),n)}
@@ -135,7 +139,7 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
    if(b.dataset.r){S.resets=Math.max(0,(S.resets||0)+ +b.dataset.r);save()}
    if(b.dataset.m){S.max=Math.max(1000,S.max+ +b.dataset.m);if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);save()}};
   $('#si').onclick=()=>firebase.auth().signInWithEmailAndPassword($('#em').value,$('#pw').value).catch(e=>alert(e.message));$('#so').onclick=()=>firebase.auth().signOut();$('#cb').onclick=()=>{addCoins(parseInt($('#cu').value)||0);$('#cu').value=''};
-  $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#lun').onclick=$('#un').onclick;$('#lun2').onclick=$('#un').onclick;
+  $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#lun').onclick=$('#un').onclick;$('#lun2').onclick=$('#un').onclick;$('#lun3').onclick=$('#un').onclick;
   $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,likes:S.likes||0,likesMax:S.likesMax||10000,max:S.max});save();return}
    b.textContent='Tap again to confirm';b._t=setTimeout(()=>{b._t=0;b.textContent='Reset all'},4000)};
   $('#sc').onchange=e=>{S.cur=+e.target.value;S.nxt=nextIdx(S.cur,S.fired);S.pool=0;save()};$('#sn').onchange=e=>{S.nxt=+e.target.value;save()};
