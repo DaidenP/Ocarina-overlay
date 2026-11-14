@@ -57,15 +57,16 @@ const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomai
 <div id="app"></div>
 <script>
 const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
-const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,pop:null,v:0};
+const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,perm:[],pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function nextIdx(i,fired){const o=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b),p=o.indexOf(i);for(let k=1;k<=o.length;k++){const j=o[(p+k)%o.length],c=C[j];if(c.rep||!fired.includes(j))return j}return i}
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
+ if(PR.test(c.name)){S.perm=S.perm||[];if(!S.perm.includes(i))S.perm.push(i)}
  const end=c.kind==='t'?Date.now()+c.dur*1000:c.kind==='i'?Date.now()+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>Date.now()):null;
  if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
-function addCoins(n,lk){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
- if(lk)S.likes=(S.likes||0)+lk;S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
+function addCoins(n,lk,fl){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+ if(lk)S.likes=(S.likes||0)+lk;if(fl)S.fol=(S.fol||0)+fl;S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}
  if(S.coins>=S.max&&!S.fired.includes(23)){S.fired.push(23);trigger(23)}save()}
 const PR=/rest of (the )?game/i;
@@ -78,7 +79,7 @@ function folSVG(s){const f=Math.min(1,s.fol/s.folMax),A='M185 790H1487L1512 821L
  <text x="837" y="783" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" style="text-shadow:none">lets get to ${s.folMax} followers!<tspan dx="26">${s.fol}/${s.folMax}</tspan></text>
  <text x="836" y="837" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" stroke="#000" stroke-width="7" paint-order="stroke" style="text-shadow:none">${Math.floor(f*100)}%</text></svg>`}
 function overlayHTML(s,now){C[23].cost=s.max||3000;
- const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>(!a.end||a.end>now)&&!PR.test(a.n)),perm=(s.fired||[]).filter(i=>C[i]&&PR.test(C[i].name)).map(i=>fx(C[i].name).replace(/\s*\(rest of (the )?game\)|\s+for (the )?rest of (the )?game/i,''));
+ const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),act=s.active.filter(a=>(!a.end||a.end>now)&&!PR.test(a.n)),perm=(s.perm||[]).filter(i=>C[i]&&PR.test(C[i].name)).map(i=>fx(C[i].name).replace(/\s*\(rest of (the )?game\)|\s+for (the )?rest of (the )?game/i,''));
  const as=act.length?act.slice(-2).map(a=>fx(a.n)+(a.end?' ('+mmss(Math.ceil((a.end-now)/1000))+')':'')).join(' / '):'none';
  const pop=s.pop&&now-s.pop.t<5000?`<div class="pop" data-t="${s.pop.t}">CURSED!<br>${fx(s.pop.n)}</div>`:'';
  const p=x=>Math.min(100,x*100),d=`animation-delay:-${(now%1800)/1000}s`;
@@ -116,13 +117,16 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
  <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select></div>
  <div class="card"><h2>Game resets</h2><div class="stat" id="rc"></div><div class="row"><button class="pri" data-r="1">+1 Reset</button><button data-r="-1">−1</button></div><div class="mu">Shown next to “Game Reset” at the top of the overlay. “Reset all” keeps this count.</div></div>
- <div class="card"><h2>Likes</h2><div class="stat" id="lkc"></div><div class="row"><button class="pri" data-l="1000">+1k Likes</button><button id="lkr">Reset likes</button><button id="lun">↩ Undo</button></div><div class="row"><button data-lm="5000">Raise goal +5k</button><button data-lm="10000">Raise goal +10k</button><button id="lgr">Reset goal to 10k</button></div></div></div>
+ <div class="card"><h2>Likes</h2><div class="stat" id="lkc"></div><div class="row"><button class="pri" data-l="1000">+1k Likes</button><button id="lkr">Reset likes</button><button id="lun">↩ Undo</button></div><div class="row"><button data-lm="5000">Raise goal +5k</button><button data-lm="10000">Raise goal +10k</button><button id="lgr">Reset goal to 10k</button></div></div>
+ <div class="card"><h2>Followers</h2><div class="stat" id="flc"></div><div class="row"><button class="pri" data-fc="1">+1 Follower</button><button id="lun2">↩ Undo</button></div><div class="mu">Each follower also adds 1 gift coin.</div></div></div>
  <div style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Live preview</h2><div id="pv"><div id="ov" class="ovbox"></div></div><div class="mu" style="margin-top:8px">Overlay link (put this in the stream): <b id="lk"></b><br>Controller link: <b id="lc"></b></div></div>
- <div class="card"><h2>Active curses</h2><div class="list" id="ac"></div></div></div>`;
+ <div class="card"><h2>Active curses</h2><div class="list" id="ac"></div></div>
+ <div class="card"><h2>Permanent curses</h2><div class="list" id="pc"></div></div></div>`;
   $('#qa').innerHTML=[1,5,10,50,100].map(n=>`<button data-c="${n}">+${n}</button>`).join('');
   $('#sc').innerHTML=opts(0);$('#sn').innerHTML=opts(0);$('#lk').textContent='https://daidenp.github.io/Ocarina-overlay/';$('#lc').textContent='https://daidenp.github.io/Ocarina-overlay/controller.html';
   $('#ctl').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.c)addCoins(+b.dataset.c);
+   if(b.dataset.fc){addCoins(+b.dataset.fc,0,+b.dataset.fc)}
    if(b.dataset.f){S.fol=Math.max(0,S.fol+ +b.dataset.f);save()}
    if(b.dataset.l){const n=+b.dataset.l;addCoins(Math.floor(n/1000),n)}
    if(b.dataset.lm){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=(S.likesMax||10000)+ +b.dataset.lm;save()}
@@ -131,16 +135,18 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
    if(b.dataset.r){S.resets=Math.max(0,(S.resets||0)+ +b.dataset.r);save()}
    if(b.dataset.m){S.max=Math.max(1000,S.max+ +b.dataset.m);if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);save()}};
   $('#si').onclick=()=>firebase.auth().signInWithEmailAndPassword($('#em').value,$('#pw').value).catch(e=>alert(e.message));$('#so').onclick=()=>firebase.auth().signOut();$('#cb').onclick=()=>{addCoins(parseInt($('#cu').value)||0);$('#cu').value=''};
-  $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#lun').onclick=$('#un').onclick;
+  $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#lun').onclick=$('#un').onclick;$('#lun2').onclick=$('#un').onclick;
   $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,likes:S.likes||0,likesMax:S.likesMax||10000,max:S.max});save();return}
    b.textContent='Tap again to confirm';b._t=setTimeout(()=>{b._t=0;b.textContent='Reset all'},4000)};
   $('#sc').onchange=e=>{S.cur=+e.target.value;S.nxt=nextIdx(S.cur,S.fired);S.pool=0;save()};$('#sn').onchange=e=>{S.nxt=+e.target.value;save()};
-  $('#ac').onclick=e=>{const b=e.target.closest('button');if(b){S.active=S.active.filter(a=>a.k!==b.dataset.k);save()}}}
- $('#st').textContent=S.coins+' / '+S.max;$('#rc').textContent=S.resets||0;$('#lkc').textContent=(S.likes||0).toLocaleString()+' / '+(S.likesMax||10000).toLocaleString();$('#st2').textContent='Goal progress: '+S.pool+' / '+C[S.cur].cost;
+  $('#ac').onclick=e=>{const b=e.target.closest('button');if(b){S.active=S.active.filter(a=>a.k!==b.dataset.k);save()}};
+ $('#pc').onclick=e=>{const b=e.target.closest('button');if(b){const i=+b.dataset.p;hist.push(JSON.stringify(S));hist=hist.slice(-30);S.perm=(S.perm||[]).filter(x=>x!==i);S.active=S.active.filter(a=>a.n!==C[i].name);save()}}}
+ $('#st').textContent=S.coins+' / '+S.max;$('#rc').textContent=S.resets||0;$('#flc').textContent=(S.fol||0).toLocaleString();$('#lkc').textContent=(S.likes||0).toLocaleString()+' / '+(S.likesMax||10000).toLocaleString();$('#st2').textContent='Goal progress: '+S.pool+' / '+C[S.cur].cost;
  $('#sc').value=S.cur;$('#sn').value=S.nxt;
  $('#ls').textContent=authUser?'Signed in as '+authUser.email:'Not signed in.';$('#wr').textContent=!dbOk?'Live sync: not connected.':canWrite?'Live sync: connected.':'Not signed in: sign in above to control the stream.';
  const now=Date.now(),act=S.active.filter(a=>!a.end||a.end>now);
  $('#ac').innerHTML=act.length?act.map(a=>`<div class="it"><span>${a.n}${a.end?'<br><small>'+mmss(Math.ceil((a.end-now)/1000))+' left</small>':''}</span><button data-k="${a.k}">Clear</button></div>`).join(''):'<span class="mu">None</span>';
+ {const pl=(S.perm||[]).filter(i=>C[i]&&PR.test(C[i].name));$('#pc').innerHTML=pl.length?pl.map(i=>`<div class="it"><span>${fx(C[i].name)}</span><button data-p="${i}">Remove</button></div>`).join(''):'<span class="mu">None</span>'}
  paintOv()}
 async function init(){try{document.fonts.ready.then(paintOv)}catch(e){}isOv=false;
  try{const l=localStorage.getItem('ocov');if(l)S=Object.assign({},DEF,heal(JSON.parse(l)))}catch(e){}
