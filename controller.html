@@ -117,6 +117,7 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
  <div class="card"><h2>Sign in</h2><div class="row"><input id="em" type="email" placeholder="Email" style="min-width:0"><input id="pw" type="password" placeholder="Password" style="min-width:0"></div><div class="row"><button class="pri" id="si">Sign in</button><button id="so">Sign out</button></div><div class="mu" id="ls"></div></div>
  <div class="card"><h2>Gift coins</h2><div class="stat" id="st"></div><div class="mu" id="st2"></div>
  <div class="row" id="qa"></div><div class="row"><input id="cu" type="number" placeholder="Custom coins" style="min-width:0"><button class="pri" id="cb">Add</button></div>
+ <div class="mu" style="margin-top:8px">Game reset cap</div><div class="row"><button data-m="5000">Raise cap +5k</button></div>
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
  <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select>
  <div class="mu" style="margin-top:8px">Change goal progress only (no gift coins)</div><div class="row"><button data-g="1">+1</button><button data-g="5">+5</button><button data-g="10">+10</button><button data-g="25">+25</button></div><div class="row"><button data-g="-1">−1</button><button data-g="-5">−5</button><button data-g="-10">−10</button><button data-g="-25">−25</button><button id="lun3">↩ Undo</button></div></div>
@@ -138,7 +139,7 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
    if(b.id==='lgr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=10000;save()}
    if(b.id==='lkr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likes=0;save()}
    if(b.dataset.r){S.resets=Math.max(0,(S.resets||0)+ +b.dataset.r);save()}
-   if(b.dataset.m){S.max=Math.max(1000,S.max+ +b.dataset.m);if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);save()}};
+   if(b.dataset.m){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.max=Math.max(1000,S.max+ +b.dataset.m);if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);save()}};
   $('#si').onclick=()=>firebase.auth().signInWithEmailAndPassword($('#em').value,$('#pw').value).catch(e=>alert(e.message));$('#so').onclick=()=>firebase.auth().signOut();$('#cb').onclick=()=>{addCoins(parseInt($('#cu').value)||0);$('#cu').value=''};
   $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#pz').onclick=()=>{if(S.pausedAt){const d=Date.now()-S.pausedAt;S.active.forEach(a=>{if(a.end)a.end+=d});S.pausedAt=null}else S.pausedAt=Date.now();save()};
   $('#lun').onclick=$('#un').onclick;$('#lun2').onclick=$('#un').onclick;$('#lun3').onclick=$('#un').onclick;
