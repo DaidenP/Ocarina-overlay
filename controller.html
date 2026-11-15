@@ -56,19 +56,25 @@ const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomai
 </head><body>
 <div id="app"></div>
 <script>
-const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
-const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,perm:[],pausedAt:null,pop:null,v:0};
+const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:i===23?c[0]:(x=>x<500?Math.round(x/5)*5:Math.round(x/25)*25)(c[0]*1.25),raw:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
+const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,perm:[],pausedAt:null,order:null,pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const NICE=x=>x<500?Math.round(x/5)*5:Math.round(x/25)*25;
+function applyCosts(s){const m=Math.pow(1.25,(s&&s.resets)||0),ids=C.map((c,i)=>i).filter(i=>i!==23),K=ids.map(i=>NICE(C[i].raw*1.25*m)).sort((a,b)=>a-b),o=s&&s.order;
+ if(o&&o.length===K.length)o.forEach((id,p)=>{C[id].cost=K[p]});else ids.forEach(i=>{C[i].cost=NICE(C[i].raw*1.25*m)});C[23].cost=Math.max((s&&s.max)||3000,K[K.length-1]+25)}
+// only these early-game goals get shuffled on a game reset; everything else keeps its place in the cost order
+const ANY=[0,2,3,4,11];
+function shuffleOrder(){const base=C.map((c,i)=>i).filter(i=>i!==23).sort((a,b)=>C[a].raw-C[b].raw||a-b),slots=[];base.forEach((id,p)=>{if(ANY.includes(id))slots.push(p)});const ids=slots.map(p=>base[p]);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}slots.forEach((p,k)=>{base[p]=ids[k]});return base}
 function nextIdx(i,fired){const o=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b),p=o.indexOf(i);for(let k=1;k<=o.length;k++){const j=o[(p+k)%o.length],c=C[j];if(c.rep||!fired.includes(j))return j}return i}
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
  if(PR.test(c.name)){S.perm=S.perm||[];if(!S.perm.includes(i))S.perm.push(i)}
  const bt=S.pausedAt||Date.now(),end=c.kind==='t'?bt+c.dur*1000:c.kind==='i'?bt+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>bt):null;
  if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
-function addPool(n){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+function addPool(n){if(!n)return;applyCosts(S);hist.push(JSON.stringify(S));hist=hist.slice(-30);
  S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}save()}
-function addCoins(n,lk){if(!n)return;C[23].cost=S.max;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+function addCoins(n,lk){if(!n)return;applyCosts(S);hist.push(JSON.stringify(S));hist=hist.slice(-30);
  if(lk)S.likes=(S.likes||0)+lk;S.coins=Math.max(0,S.coins+n);S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}
  if(S.coins>=S.max&&!S.fired.includes(23)){S.fired.push(23);trigger(23)}save()}
@@ -81,7 +87,7 @@ function folSVG(s){const f=Math.min(1,s.fol/s.folMax),A='M185 790H1487L1512 821L
  <path d="${A}" fill="#2a0a06" stroke="#000" stroke-width="10"/><rect x="160" y="790" width="${1352*f}" height="62" fill="url(#st)" clip-path="url(#fc)"/><path d="${A}" fill="none" stroke="#f2d98e" stroke-width="4"/>
  <text x="837" y="783" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" style="text-shadow:none">lets get to ${s.folMax} followers!<tspan dx="26">${s.fol}/${s.folMax}</tspan></text>
  <text x="836" y="837" text-anchor="middle" font-weight="400" font-size="46" fill="#fff" stroke="#000" stroke-width="7" paint-order="stroke" style="text-shadow:none">${Math.floor(f*100)}%</text></svg>`}
-function overlayHTML(s,now){C[23].cost=s.max||3000;
+function overlayHTML(s,now){applyCosts(s);
  const cur=C[s.cur],nx=C[s.nxt],need=Math.max(0,cur.cost-s.pool),tn=s.pausedAt||now,act=s.active.filter(a=>(!a.end||a.end>tn)&&!PR.test(a.n)),perm=(s.perm||[]).filter(i=>C[i]&&PR.test(C[i].name)).map(i=>fx(C[i].name).replace(/\s*\(rest of (the )?game\)|\s+for (the )?rest of (the )?game/i,''));
  let as=act.length?act.slice(-2).map(a=>fx(a.n)+(a.end?' ('+mmss(Math.ceil((a.end-tn)/1000))+')':'')).join(' / '):'none';
  if(s.pausedAt&&act.some(x=>x.end))as+=' [paused]';
@@ -111,13 +117,12 @@ function save(){S.v=Date.now();render();try{localStorage.setItem('ocov',JSON.str
 function heal(o){if(o&&o.cur===0&&o.nxt===6&&!(o.fired||[]).length)o.nxt=1;return o}
 function adopt(d){if(d&&(isOv||d.v>=S.v)){S=Object.assign({},DEF,heal(d));render()}}
 function opts(sel){return C.map((c,i)=>[c,i]).sort((a,b)=>a[0].cost-b[0].cost||a[1]-b[1]).map(([c,i])=>`<option value="${i}" ${i===sel?'selected':''}>${c.cost} – ${c.name}</option>`).join('')}
-function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#sn']){const el=$(q),o=el&&[...el.options].find(x=>x.value==='23');if(o)o.textContent=C[23].cost+' – '+C[23].name}
+function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.order||0)+S.max+'|'+(S.resets||0);if($('#sc')&&window._sg!==sg){window._sg=sg;$('#sc').innerHTML=opts(S.cur);$('#sn').innerHTML=opts(S.nxt)}}for(const q of ['#sc','#sn']){const el=$(q),o=el&&[...el.options].find(x=>x.value==='23');if(o)o.textContent=C[23].cost+' – '+C[23].name}
  if(isOv){document.body.classList.add('ovmode');if(!$('#ov')){root.style.cssText='padding:0;max-width:none;display:block';root.innerHTML='<div id="ov" class="ovbox"></div>'}paintOv();return}
  if(!$('#ctl')){root.innerHTML=`<div id="ctl" style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Sign in</h2><div class="row"><input id="em" type="email" placeholder="Email" style="min-width:0"><input id="pw" type="password" placeholder="Password" style="min-width:0"></div><div class="row"><button class="pri" id="si">Sign in</button><button id="so">Sign out</button></div><div class="mu" id="ls"></div></div>
  <div class="card"><h2>Gift coins</h2><div class="stat" id="st"></div><div class="mu" id="st2"></div>
  <div class="row" id="qa"></div><div class="row"><input id="cu" type="number" placeholder="Custom coins" style="min-width:0"><button class="pri" id="cb">Add</button></div>
- <div class="mu" style="margin-top:8px">Game reset cap</div><div class="row"><button data-m="5000">Raise cap +5k</button></div>
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
  <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select>
  <div class="mu" style="margin-top:8px">Change goal progress only (no gift coins)</div><div class="row"><button data-g="1">+1</button><button data-g="5">+5</button><button data-g="10">+10</button><button data-g="25">+25</button></div><div class="row"><button data-g="-1">−1</button><button data-g="-5">−5</button><button data-g="-10">−10</button><button data-g="-25">−25</button><button id="lun3">↩ Undo</button></div></div>
@@ -138,12 +143,12 @@ function render(){const root=$('#app');C[23].cost=S.max;for(const q of ['#sc','#
    if(b.dataset.lm){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=(S.likesMax||10000)+ +b.dataset.lm;save()}
    if(b.id==='lgr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=10000;save()}
    if(b.id==='lkr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likes=0;save()}
-   if(b.dataset.r){S.resets=Math.max(0,(S.resets||0)+ +b.dataset.r);save()}
-   if(b.dataset.m){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.max=Math.max(1000,S.max+ +b.dataset.m);if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);save()}};
+   if(b.dataset.r){const n=+b.dataset.r;hist.push(JSON.stringify(S));hist=hist.slice(-30);const r0=S.resets||0;S.resets=Math.max(0,r0+n);S.max=Math.max(1000,S.max+(S.resets-r0)*5000);if(n>0){S.order=shuffleOrder();S.fired=[];S.pool=0;S.coins=0;S.active=[];S.perm=[];applyCosts(S);const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,S.fired)}else{if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);applyCosts(S);S.nxt=nextIdx(S.cur,S.fired)}save()}
+   };
   $('#si').onclick=()=>firebase.auth().signInWithEmailAndPassword($('#em').value,$('#pw').value).catch(e=>alert(e.message));$('#so').onclick=()=>firebase.auth().signOut();$('#cb').onclick=()=>{addCoins(parseInt($('#cu').value)||0);$('#cu').value=''};
   $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#pz').onclick=()=>{if(S.pausedAt){const d=Date.now()-S.pausedAt;S.active.forEach(a=>{if(a.end)a.end+=d});S.pausedAt=null}else S.pausedAt=Date.now();save()};
   $('#lun').onclick=$('#un').onclick;$('#lun2').onclick=$('#un').onclick;$('#lun3').onclick=$('#un').onclick;
-  $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,likes:S.likes||0,likesMax:S.likesMax||10000,max:S.max});save();return}
+  $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,likes:S.likes||0,likesMax:S.likesMax||10000,max:S.max,order:S.order});applyCosts(S);{const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,[])}save();return}
    b.textContent='Tap again to confirm';b._t=setTimeout(()=>{b._t=0;b.textContent='Reset all'},4000)};
   $('#sc').onchange=e=>{S.cur=+e.target.value;S.nxt=nextIdx(S.cur,S.fired);S.pool=0;save()};$('#sn').onchange=e=>{S.nxt=+e.target.value;save()};
   $('#ac').onclick=e=>{const b=e.target.closest('button');if(b){S.active=S.active.filter(a=>a.k!==b.dataset.k);save()}};
