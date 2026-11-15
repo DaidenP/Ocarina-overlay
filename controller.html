@@ -130,10 +130,10 @@ function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.
  <div class="card"><h2>Gift coins</h2><div class="stat" id="st"></div><div class="mu" id="st2"></div>
  <div class="row" id="qa"></div><div class="row"><input id="cu" type="number" placeholder="Custom coins" style="min-width:0"><button class="pri" id="cb">Add</button></div>
  <div class="row"><button id="un">↩ Undo</button><button id="rs">Reset all</button></div><div class="mu" id="wr"></div></div>
- <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select>
- <div class="mu" style="margin-top:8px">Change goal progress only (no gift coins)</div><div class="row"><button data-g="1">+1</button><button data-g="5">+5</button><button data-g="10">+10</button><button data-g="25">+25</button></div><div class="row"><button data-g="-1">−1</button><button data-g="-5">−5</button><button data-g="-10">−10</button><button data-g="-25">−25</button><button id="lun3">↩ Undo</button></div></div>
  <div class="card"><h2>Game resets</h2><div class="stat" id="rc"></div><div class="row"><button class="pri" data-r="1">+1 Reset</button><button data-r="-1">−1</button></div><div class="mu">Shown next to “Game Reset” at the top of the overlay. “Reset all” keeps this count.</div></div>
  <div class="card"><h2>Likes</h2><div class="stat" id="lkc"></div><div class="row"><button class="pri" data-l="1000">+1k Likes</button><button id="lkr">Reset likes</button><button id="lun">↩ Undo</button></div><div class="row"><button data-lm="5000">Raise goal +5k</button><button data-lm="10000">Raise goal +10k</button><button id="lgr">Reset goal to 10k</button></div></div>
+ <div class="card"><h2>Goals</h2><div class="mu">Current goal</div><select id="sc" style="width:100%"></select><div class="mu" style="margin-top:6px">Next goal</div><select id="sn" style="width:100%"></select>
+ <div class="mu" style="margin-top:8px">Change goal progress only (no gift coins)</div><div class="row"><button data-g="1">+1</button><button data-g="5">+5</button><button data-g="10">+10</button><button data-g="25">+25</button></div><div class="row"><button data-g="-1">−1</button><button data-g="-5">−5</button><button data-g="-10">−10</button><button data-g="-25">−25</button><button id="lun3">↩ Undo</button></div></div>
  <div class="card"><h2>Followers</h2><div class="row"><button class="pri" data-fc="1">+1 Follower</button><button id="lun2">↩ Undo</button></div><div class="mu">Each follower also adds 1 gift coin.</div></div></div>
  <div style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Live preview</h2><div id="pv"><div id="ov" class="ovbox"></div></div><div class="mu" style="margin-top:8px">Overlay link (put this in the stream): <b id="lk"></b><br>Controller link: <b id="lc"></b></div></div>
@@ -146,7 +146,7 @@ function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.
    if(b.dataset.fc){addCoins(+b.dataset.fc)}
    if(b.dataset.f){S.fol=Math.max(0,S.fol+ +b.dataset.f);save()}
    if(b.dataset.l){const n=+b.dataset.l;addCoins(Math.floor(n/1000),n)}
-   if(b.dataset.lm){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=(S.likesMax||10000)+ +b.dataset.lm;save()}
+   if(b.dataset.lm){{const d=+b.dataset.lm;addCoins(d/1000);S.likesMax=(S.likesMax||10000)+d;save()}}
    if(b.id==='lgr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=10000;save()}
    if(b.id==='lkr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likes=0;save()}
    if(b.dataset.r){const n=+b.dataset.r;hist.push(JSON.stringify(S));hist=hist.slice(-30);const r0=S.resets||0;S.resets=Math.max(0,r0+n);S.max=Math.max(1000,S.max+(S.resets-r0)*5000);if(n>0){S.order=shuffleOrder();S.fired=[];S.pool=0;S.coins=0;S.active=[];S.perm=[];S.queue=[];S.aside=[];applyCosts(S);const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,S.fired)}else{if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);applyCosts(S);S.nxt=nextIdx(S.cur,S.fired)}save()}
