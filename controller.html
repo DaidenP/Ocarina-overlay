@@ -57,7 +57,7 @@ const firebaseConfig={apiKey:"AIzaSyADrIpYovLTcTL-srUvxbR3KLbYXCfCEyI",authDomai
 <div id="app"></div>
 <script>
 const C=[[10,'Take 1 heart of damage','i',0,1],[15,'Cooldown Curse – items locked 20s after use','t',300,1],[20,'No Z-targeting','t',300,1],[30,'No rolling or sprinting','t',300,1],[35,'Side quest (short) – chat’s choice','p',0,1],[40,'Lose 1 max heart (rest of game)','p',0,0],[50,'Overhead camera only','t',300,1],[60,'Drop all bombs and arrows','i',0,0],[70,'Side quest (long) – chat’s choice','p',0,1],[75,'Chat picks an item I can’t use','t',300,1],[90,'No shield (rest of game)','p',0,0],[100,'Backwalk only','t',300,1],[110,'No sword for this dungeon','p',0,0],[120,'Blindfold','t',180,1],[135,'Chat picks a location – go now, no warps','p',0,0],[150,'No horse','p',0,0],[150,'No sprint (rest of game)','p',0,0],[175,'Glass cannon – beat next boss, no hits','p',0,0],[200,'Boss fight – chat picks (Hall of Fallen Foes)','p',0,0],[250,'Sticks only for this dungeon','p',0,0],[500,'No sword for the rest of the game','p',0,0],[750,'3-heart challenge','p',0,0],[1500,'1-heart challenge','p',0,0],[2500,'FINAL CURSE: GAME RESET','p',0,0],[1000,'1 heart for a temple','p',0,0],[1500,'Restart a temple','p',0,0]].map((c,i)=>({id:i,cost:i===23?c[0]:(x=>x<500?Math.round(x/5)*5:Math.round(x/25)*25)(c[0]*1.25),raw:c[0],name:c[1],kind:c[2],dur:c[3],rep:!!c[4]}));
-const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,perm:[],pausedAt:null,order:null,pop:null,v:0};
+const DEF={coins:0,max:3000,pool:0,cur:0,nxt:1,fired:[],active:[],fol:0,folMax:1000,resets:0,likes:0,likesMax:10000,perm:[],queue:[],aside:[],pausedAt:null,order:null,pop:null,v:0};
 let S=JSON.parse(JSON.stringify(DEF)),hist=[],ref=null,bc=null,isOv=false,canWrite=true,dbOk=false,authUser=null;
 const $=s=>document.querySelector(s),mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 const NICE=x=>x<500?Math.round(x/5)*5:Math.round(x/25)*25;
@@ -67,10 +67,17 @@ function applyCosts(s){const m=Math.pow(1.25,(s&&s.resets)||0),ids=C.map((c,i)=>
 const ANY=[0,2,3,4,11];
 function shuffleOrder(){const base=C.map((c,i)=>i).filter(i=>i!==23).sort((a,b)=>C[a].raw-C[b].raw||a-b),slots=[];base.forEach((id,p)=>{if(ANY.includes(id))slots.push(p)});const ids=slots.map(p=>base[p]);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}slots.forEach((p,k)=>{base[p]=ids[k]});return base}
 function nextIdx(i,fired){const o=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b),p=o.indexOf(i);for(let k=1;k<=o.length;k++){const j=o[(p+k)%o.length],c=C[j];if(c.rep||!fired.includes(j))return j}return i}
+const SLOTS=2,ASIDE_MAX=3;
+function liveSlots(){const tn=S.pausedAt||Date.now();return S.active.filter(a=>!PR.test(a.n)&&(!a.end||a.end>tn)).length}
+function startCurse(i,left){const c=C[i],bt=S.pausedAt||Date.now(),end=(left!=null)?(left?bt+left:0):c.kind==='t'?bt+c.dur*1000:c.kind==='i'?bt+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>bt):null;
+ if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end,i})}
+function curseId(a){return a.i!=null?a.i:C.findIndex(c=>c.name===a.n)}
+function promote(){S.queue=S.queue||[];let ch=false;while(S.queue.length&&liveSlots()<SLOTS){const q=S.queue.shift();startCurse(q.i,q.left);ch=true}return ch}
 function trigger(i){const c=C[i];if(!c.rep&&!S.fired.includes(i))S.fired.push(i);
  if(PR.test(c.name)){S.perm=S.perm||[];if(!S.perm.includes(i))S.perm.push(i)}
- const bt=S.pausedAt||Date.now(),end=c.kind==='t'?bt+c.dur*1000:c.kind==='i'?bt+15000:0,ex=c.kind==='t'?S.active.find(a=>a.n===c.name&&a.end>bt):null;
- if(ex)ex.end=end;else S.active.push({k:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),n:c.name,end});}
+ S.queue=S.queue||[];const bt=S.pausedAt||Date.now();
+ if(PR.test(c.name)||liveSlots()<SLOTS||(c.kind==='t'&&S.active.some(a=>a.n===c.name&&a.end>bt)))startCurse(i);
+ else if(!(c.kind==='t'&&S.queue.some(q=>q.i===i)))S.queue.push({i,n:c.name})}
 function addPool(n){if(!n)return;applyCosts(S);hist.push(JSON.stringify(S));hist=hist.slice(-30);
  S.pool=Math.max(0,S.pool+n);let g=0;
  while(S.pool>=C[S.cur].cost&&g++<25){S.pool-=C[S.cur].cost;trigger(S.cur);S.cur=S.nxt;S.nxt=nextIdx(S.cur,S.fired)}save()}
@@ -130,7 +137,7 @@ function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.
  <div class="card"><h2>Followers</h2><div class="row"><button class="pri" data-fc="1">+1 Follower</button><button id="lun2">↩ Undo</button></div><div class="mu">Each follower also adds 1 gift coin.</div></div></div>
  <div style="display:grid;gap:14px;align-content:start">
  <div class="card"><h2>Live preview</h2><div id="pv"><div id="ov" class="ovbox"></div></div><div class="mu" style="margin-top:8px">Overlay link (put this in the stream): <b id="lk"></b><br>Controller link: <b id="lc"></b></div></div>
- <div class="card"><h2>Active curses</h2><div class="list" id="ac"></div><div class="row"><button id="pz">Pause timers</button></div></div>
+ <div class="card"><h2>Active curses</h2><div class="list" id="ac"></div><div class="mu" id="qh" style="margin-top:8px"></div><div class="list" id="qc"></div><div class="mu" id="sh" style="margin-top:8px"></div><div class="list" id="sa"></div><div class="mu" id="qm"></div><div class="row"><button id="pz">Pause timers</button></div></div>
  <div class="card"><h2>Permanent curses</h2><div class="list" id="pc"></div></div></div>`;
   $('#qa').innerHTML=[1,5,10,50,100].map(n=>`<button data-c="${n}">+${n}</button>`).join('');
   $('#sc').innerHTML=opts(0);$('#sn').innerHTML=opts(0);$('#lk').textContent='https://daidenp.github.io/Ocarina-overlay/';$('#lc').textContent='https://daidenp.github.io/Ocarina-overlay/controller.html';
@@ -142,7 +149,7 @@ function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.
    if(b.dataset.lm){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=(S.likesMax||10000)+ +b.dataset.lm;save()}
    if(b.id==='lgr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likesMax=10000;save()}
    if(b.id==='lkr'){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.likes=0;save()}
-   if(b.dataset.r){const n=+b.dataset.r;hist.push(JSON.stringify(S));hist=hist.slice(-30);const r0=S.resets||0;S.resets=Math.max(0,r0+n);S.max=Math.max(1000,S.max+(S.resets-r0)*5000);if(n>0){S.order=shuffleOrder();S.fired=[];S.pool=0;S.coins=0;S.active=[];S.perm=[];applyCosts(S);const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,S.fired)}else{if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);applyCosts(S);S.nxt=nextIdx(S.cur,S.fired)}save()}
+   if(b.dataset.r){const n=+b.dataset.r;hist.push(JSON.stringify(S));hist=hist.slice(-30);const r0=S.resets||0;S.resets=Math.max(0,r0+n);S.max=Math.max(1000,S.max+(S.resets-r0)*5000);if(n>0){S.order=shuffleOrder();S.fired=[];S.pool=0;S.coins=0;S.active=[];S.perm=[];S.queue=[];S.aside=[];applyCosts(S);const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,S.fired)}else{if(S.coins<S.max)S.fired=S.fired.filter(x=>x!==23);applyCosts(S);S.nxt=nextIdx(S.cur,S.fired)}save()}
    };
   $('#si').onclick=()=>firebase.auth().signInWithEmailAndPassword($('#em').value,$('#pw').value).catch(e=>alert(e.message));$('#so').onclick=()=>firebase.auth().signOut();$('#cb').onclick=()=>{addCoins(parseInt($('#cu').value)||0);$('#cu').value=''};
   $('#un').onclick=()=>{if(hist.length){S=JSON.parse(hist.pop());save()}};$('#pz').onclick=()=>{if(S.pausedAt){const d=Date.now()-S.pausedAt;S.active.forEach(a=>{if(a.end)a.end+=d});S.pausedAt=null}else S.pausedAt=Date.now();save()};
@@ -150,21 +157,29 @@ function render(){const root=$('#app');applyCosts(S);{const sg=JSON.stringify(S.
   $('#rs').onclick=()=>{const b=$('#rs');if(b._t){clearTimeout(b._t);b._t=0;b.textContent='Reset all';hist.push(JSON.stringify(S));hist=hist.slice(-30);S=Object.assign(JSON.parse(JSON.stringify(DEF)),{fol:S.fol,resets:S.resets||0,likes:S.likes||0,likesMax:S.likesMax||10000,max:S.max,order:S.order});applyCosts(S);{const f0=C.map((c,x)=>x).sort((a,b)=>C[a].cost-C[b].cost||a-b)[0];S.cur=f0;S.nxt=nextIdx(f0,[])}save();return}
    b.textContent='Tap again to confirm';b._t=setTimeout(()=>{b._t=0;b.textContent='Reset all'},4000)};
   $('#sc').onchange=e=>{S.cur=+e.target.value;S.nxt=nextIdx(S.cur,S.fired);S.pool=0;save()};$('#sn').onchange=e=>{S.nxt=+e.target.value;save()};
-  $('#ac').onclick=e=>{const b=e.target.closest('button');if(b){S.active=S.active.filter(a=>a.k!==b.dataset.k);save()}};
+  $('#ac').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+   if(b.dataset.k){S.active=S.active.filter(a=>a.k!==b.dataset.k);promote();save()}
+   if(b.dataset.s){const a=S.active.find(x=>x.k===b.dataset.s);if(a){S.aside=S.aside||[];if(S.aside.length>=ASIDE_MAX){$('#qm').textContent='Set aside is full ('+ASIDE_MAX+'). Drop or bring one back first.';setTimeout(()=>{$('#qm').textContent=''},4000);return}
+    hist.push(JSON.stringify(S));hist=hist.slice(-30);const tn=S.pausedAt||Date.now();S.aside.push({i:curseId(a),n:a.n,left:a.end?Math.max(0,a.end-tn):0});S.active=S.active.filter(x=>x.k!==a.k);promote();save()}}};
+  $('#qc').onclick=e=>{const b=e.target.closest('button');if(b&&b.dataset.qx!=null){hist.push(JSON.stringify(S));hist=hist.slice(-30);S.queue.splice(+b.dataset.qx,1);save()}};
+  $('#sa').onclick=e=>{const b=e.target.closest('button');if(!b)return;hist.push(JSON.stringify(S));hist=hist.slice(-30);
+   if(b.dataset.sb!=null){const q=S.aside.splice(+b.dataset.sb,1)[0];if(q){S.queue.unshift(q);promote()}}
+   if(b.dataset.sx!=null)S.aside.splice(+b.dataset.sx,1);save()};
  $('#pc').onclick=e=>{const b=e.target.closest('button');if(b){const i=+b.dataset.p;hist.push(JSON.stringify(S));hist=hist.slice(-30);S.perm=(S.perm||[]).filter(x=>x!==i);S.active=S.active.filter(a=>a.n!==C[i].name);save()}}}
  $('#st').textContent=S.coins+' / '+S.max;$('#rc').textContent=S.resets||0;$('#lkc').textContent=(S.likes||0).toLocaleString()+' / '+(S.likesMax||10000).toLocaleString();$('#st2').textContent='Goal progress: '+S.pool+' / '+C[S.cur].cost;
  $('#sc').value=S.cur;$('#sn').value=S.nxt;
  $('#ls').textContent=authUser?'Signed in as '+authUser.email:'Not signed in.';$('#wr').textContent=!dbOk?'Live sync: not connected.':canWrite?'Live sync: connected.':'Not signed in: sign in above to control the stream.';
  const now=S.pausedAt||Date.now(),act=S.active.filter(a=>!a.end||a.end>now);
  $('#pz').textContent=S.pausedAt?'▶ Resume timers':'⏸ Pause timers';
- $('#ac').innerHTML=act.length?act.map(a=>`<div class="it"><span>${a.n}${a.end?'<br><small>'+mmss(Math.ceil((a.end-now)/1000))+' left</small>':''}</span><button data-k="${a.k}">Clear</button></div>`).join(''):'<span class="mu">None</span>';
+ $('#ac').innerHTML=act.length?act.map(a=>`<div class="it"><span>${a.n}${a.end?'<br><small>'+mmss(Math.ceil((a.end-now)/1000))+' left</small>':''}</span><button data-k="${a.k}">Clear</button>${PR.test(a.n)?'':`<button data-s="${a.k}">Set aside</button>`}</div>`).join(''):'<span class="mu">None</span>';
+ {const qq=S.queue||[],sa=S.aside||[];$('#qh').textContent=qq.length?'Waiting (starts when a slot frees up)':'';$('#qc').innerHTML=qq.map((q,x)=>`<div class="it"><span>${x+1}. ${fx(q.n)}</span><button data-qx="${x}">Remove</button></div>`).join('');$('#sh').textContent=sa.length?'Set aside ('+sa.length+'/'+ASIDE_MAX+')':'';$('#sa').innerHTML=sa.map((q,x)=>`<div class="it"><span>${fx(q.n)}${q.left?'<br><small>'+mmss(Math.ceil(q.left/1000))+' left</small>':''}</span><button data-sb="${x}">Curse back</button><button data-sx="${x}">Drop</button></div>`).join('')}
  {const pl=(S.perm||[]).filter(i=>C[i]&&PR.test(C[i].name));$('#pc').innerHTML=pl.length?pl.map(i=>`<div class="it"><span>${fx(C[i].name)}</span><button data-p="${i}">Remove</button></div>`).join(''):'<span class="mu">None</span>'}
  paintOv()}
 async function init(){try{document.fonts.ready.then(paintOv)}catch(e){}isOv=false;
  try{const l=localStorage.getItem('ocov');if(l)S=Object.assign({},DEF,heal(JSON.parse(l)))}catch(e){}
  try{bc=new BroadcastChannel('ocov');bc.onmessage=e=>adopt(e.data)}catch(e){}
  addEventListener('storage',e=>{if(e.key==='ocov'&&e.newValue)adopt(JSON.parse(e.newValue))});
- render();setInterval(()=>{S.active=S.active.filter(a=>!a.end||a.end>(S.pausedAt||Date.now())-60000);isOv?paintOv():render()},1000);
- try{firebase.initializeApp(firebaseConfig);ref=firebase.database().ref('state');dbOk=true;ref.on('value',s=>{const d=s.val();if(d){d.active=d.active||[];d.fired=d.fired||[];adopt(d)}});if(!isOv&&firebase.auth)firebase.auth().onAuthStateChanged(u=>{canWrite=!!u;authUser=u;render()})}catch(e){}}
+ render();setInterval(()=>{S.active=S.active.filter(a=>!a.end||a.end>(S.pausedAt||Date.now())-60000);if(!isOv&&canWrite&&promote())save();isOv?paintOv():render()},1000);
+ try{firebase.initializeApp(firebaseConfig);ref=firebase.database().ref('state');dbOk=true;ref.on('value',s=>{const d=s.val();if(d){d.active=d.active||[];d.fired=d.fired||[];d.queue=d.queue||[];d.aside=d.aside||[];adopt(d)}});if(!isOv&&firebase.auth)firebase.auth().onAuthStateChanged(u=>{canWrite=!!u;authUser=u;render()})}catch(e){}}
 init();
 </script></body></html>
